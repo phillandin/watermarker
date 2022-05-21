@@ -37,7 +37,7 @@ class Editor(QtWidgets.QDialog):
         self.preview.setMaximumHeight(420)
         self.preview.setMaximumWidth(600)
         self.image_widget_layout.addWidget(self.preview)
-        pix_map = QtGui.QPixmap("../placeholder.jpg")
+        pix_map = QtGui.QPixmap("./placeholder.jpg")
         self.preview.setPixmap(pix_map.scaledToWidth(600))
 
         # right panel (selecting file and downloading watermarked file)
