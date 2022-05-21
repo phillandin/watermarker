@@ -28,10 +28,10 @@ class Editor(QtWidgets.QDialog):
 
         # image section
         self.image_widget = QtWidgets.QWidget()
-        self.layout.addWidget(self.image_widget, 1, 1, 5, 6)
+        self.layout.addWidget(self.image_widget, 1, 1, 4, 6)
 
-        self.image_widget_layout = QtWidgets.QHBoxLayout(self.image_widget)
-        self.image_widget_layout.setContentsMargins(10, 10, 0, 0)
+        self.image_widget_layout = QtWidgets.QGridLayout(self.image_widget)
+        # self.image_widget_layout.setContentsMargins(10, 10, 0, 0)
 
         self.preview = QtWidgets.QLabel()
         self.preview.setMaximumHeight(420)
@@ -49,6 +49,9 @@ class Editor(QtWidgets.QDialog):
 
         self.ul_dl_layout = QtWidgets.QVBoxLayout(self.ul_dl_widget)
         self.ul_dl_layout.setContentsMargins(20, 50, 20, 50)
+
+        self.ul_dl_spacer1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.ul_dl_layout.addItem(self.ul_dl_spacer1)
 
         self.ul_button = QtWidgets.QPushButton("Select Image")
         self.ul_button.setObjectName("ul_button")
@@ -89,6 +92,9 @@ class Editor(QtWidgets.QDialog):
         self.dl_button.clicked.connect(self.save_file)
         self.ul_dl_layout.addWidget(self.dl_button)
 
+        self.ul_dl_spacer2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Preferred,
+                                                   QtWidgets.QSizePolicy.Preferred)
+        self.ul_dl_layout.addItem(self.ul_dl_spacer2)
 
         # bottom panel (editing watermark)
         self.edit_widget = QtWidgets.QWidget()
@@ -180,7 +186,7 @@ class Editor(QtWidgets.QDialog):
                 txt = Image.new("RGBA", base.size, (255, 255, 255, 0))
                 d = ImageDraw.Draw(txt)
                 font_size = round((.6 * y) / self.font_factor * x / (y * 1.2))
-                font = ImageFont.truetype("../Imperator.ttf", font_size)
+                font = ImageFont.truetype("./Imperator.ttf", font_size)
                 text = self.wm_text_field.text()
                 font_width, font_height = font.getsize(text)
                 if self.wm_pos == "bottom_rt":
@@ -215,7 +221,7 @@ class Editor(QtWidgets.QDialog):
                     self.preview.setPixmap(pix_map.scaledToWidth(600))
                 else:
                     self.preview.setPixmap(pix_map.scaledToHeight(400))
-                self.preview.setAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignTop)
+                self.preview.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop)
         except AttributeError:
             pass
 
