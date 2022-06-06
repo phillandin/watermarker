@@ -14,6 +14,7 @@ class Editor(QtWidgets.QDialog):
         super().__init__()
         self.start_image = None
         self.edited_image = None
+        self.edit_timer = None
         self.wm_pos = "bottom_rt"
         self.font_factor = 7
 
@@ -178,14 +179,19 @@ class Editor(QtWidgets.QDialog):
         self.wm_text_field = QtWidgets.QLineEdit("watermark")
         self.wm_text_field.setMaximumWidth(200)
         self.edit_widget_layout.addWidget(self.wm_text_field, 1, 5)
+        self.wm_text_field.textChanged.connect(self.timed_edit)
 
     def edit_image(self):
         try:
             with Image.open(self.start_image).convert("RGBA") as base:
                 x, y = base.size
+                # creates a new white Image with the same dimensions as the user-selected image file to later
+                # superimpose onto the image file
                 txt = Image.new("RGBA", base.size, (255, 255, 255, 0))
-                d = ImageDraw.Draw(txt)
-                font_size = round((.6 * y) / self.font_factor * x / (y * 1.2))
+
+                # makes the size of the font proportional to the size of the image, with the font_factor adjusting
+                # according to the font size selected
+                font_size = round((.6 * y) / self.font_factor * x / y)
                 font = ImageFont.truetype("./Imperator.ttf", font_size)
                 text = self.wm_text_field.text()
                 font_width, font_height = font.getsize(text)
@@ -204,19 +210,26 @@ class Editor(QtWidgets.QDialog):
                 else:
                     new_x = .5 * x - .5 * font_width
                     new_y = .5 * y - .5 * font_height
+
+                # creates a watermark by writing the text 5 time: 4 times with black and medium opacity (each time
+                # offset slightly in a different direction) and once in white with less opacity
+                d = ImageDraw.Draw(txt)
                 d.text((new_x - 2, new_y), text, font=font, fill=(0, 0, 0, 100))
                 d.text((new_x + 2, new_y), text, font=font, fill=(0, 0, 0, 100))
                 d.text((new_x, new_y - 2), text, font=font, fill=(0, 0, 0, 100))
                 d.text((new_x, new_y + 2), text, font=font, fill=(0, 0, 0, 100))
-                d.text((new_x, new_y), text, font=font, fill=(255, 255, 255, 100))
+                d.text((new_x, new_y), text, font=font, fill=(255, 255, 255, 75))
 
+                # superimposes the blank Image with the watermark onto the user-selected image file, saving it both as
+                # a PIL Image object (self.edited_image) and as a converted jpg file. The latter is necessary for the
+                # QtGui.QPixmap object, which displays the watermarked image file.
                 wm_image = Image.alpha_composite(base, txt)
                 self.edited_image = wm_image
                 wm_jpg = wm_image.convert("RGB")
                 wm_jpg.save("watermarked_im.jpg")
                 pix_map = QtGui.QPixmap("watermarked_im.jpg")
 
-                # limit pixmap by widest dimension
+                # limits size of pixmap by widest dimension
                 if pix_map.width() > pix_map.height():
                     self.preview.setPixmap(pix_map.scaledToWidth(600))
                 else:
@@ -226,19 +239,22 @@ class Editor(QtWidgets.QDialog):
             pass
 
     def select_file(self):
-        file_name = QtWidgets.QFileDialog.getOpenFileName(self, "Open file", "c:\\", "Image files (*.jpg *.gif)")
+        file_name = QtWidgets.QFileDialog.getOpenFileName(self, "Open file", "c:\\", "Image files (*.jpg *.png *.webp)")
         if file_name[0] != "":
             self.start_image = file_name[0]
+            # ensure that the image file name isn't too long for the space available, which comfortably displays lines
+            # 15 characters in length
             name = self.start_image.split("/")[-1]
             if len(name) > 15:
                 num_lines = ceil(len(name) / 15)
+                # print 15 characters in each line with the remainder on its own line
                 print_name_lines = [f"{name[(15 * (i - 1)):(15 * i)]}\n" for i in range(num_lines + 1)]
                 name = "".join(print_name_lines)
             self.ul_text.setText(f"\nYou're editing:\n\n{name}")
             self.edit_image()
 
     def save_file(self):
-        if self.start_image is not None:
+        if self.start_image is not None:  # ensures that there is actually an image to save
             file_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file',
                                                               "watermarked-image", "JPEG")
             wm_jpg = self.edited_image.convert("RGB")
@@ -291,6 +307,17 @@ class Editor(QtWidgets.QDialog):
             self.font_factor = 5
             self.edit_image()
 
+    def update_text(self):
+        widget.edit_image()
+        self.edit_timer = None
+
+    # automatically update watermark text to match wm_text_field 2 seconds after first edit
+    def timed_edit(self):
+        if not self.edit_timer:  # checks for a timer that has already been started due to a change to the wm_text_field
+            self.edit_timer = QtCore.QTimer()
+            self.edit_timer.timeout.connect(widget.update_text)
+            self.edit_timer.start(2000)
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
@@ -298,11 +325,5 @@ if __name__ == "__main__":
     widget = Editor()
     widget.resize(800, 600)
     widget.show()
-
-    # automatically update watermark text to match wm_text_field 3 seconds after first edit
-    if widget.wm_text_field.textChanged:
-        timer = QtCore.QTimer()
-        timer.timeout.connect(widget.edit_image)
-        timer.start(3000)
 
     sys.exit(app.exec())
